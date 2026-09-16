@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMSPal - Master System Palette Editor & Viewer</title>
+    <style>
+        /* VARIAVEIS DE TEMAS */
+        :root {
+            --bg-body: #d4d0c8;
+            --text-main: #000000;
+            --panel-bg: #d4d0c8;
+            --panel-border-lt: #ffffff;
+            --panel-border-rb: #808080;
+            --button-bg: #d4d0c8;
+            --button-border-lt: #ffffff;
+            --button-border-rb: #404040;
+            --inset-bg: #ffffff;
+            --header-bg: #0a246a;
+            --header-text: #ffffff;
+        }
+
+        /* Tema Windows 95 */
+        [data-theme="win95"] {
+            --bg-body: #008080;
+            --text-main: #000000;
+            --panel-bg: #c0c0c0;
+            --panel-border-lt: #ffffff;
+            --panel-border-rb: #808080;
+            --button-bg: #c0c0c0;
+            --button-border-lt: #ffffff;
+            --button-border-rb: #000000;
+            --inset-bg: #ffffff;
+            --header-bg: #000080;
+            --header-text: #ffffff;
+        }
+
+        /* Tema Escuro */
+        [data-theme="dark"] {
+            --bg-body: #1e1e1e;
+            --text-main: #d4d4d4;
+            --panel-bg: #2d2d30;
+            --panel-border-lt: #434346;
+            --panel-border-rb: #181818;
+            --button-bg: #333337;
+            --button-border-lt: #505054;
+            --button-border-rb: #1e1e1e;
+            --inset-bg: #252526;
+            --header-bg: #3c3c3c;
+            --header-text: #ffffff;
+        }
+
+        /* Tema Meia Noite */
+        [data-theme="midnight"] {
+            --bg-body: #0b0f19;
+            --text-main: #cbd5e1;
+            --panel-bg: #0f172a;
+            --panel-border-lt: #334155;
+            --panel-border-rb: #020617;
+            --button-bg: #1e293b;
+            --button-border-lt: #475569;
+            --button-border-rb: #0f172a;
+            --inset-bg: #020617;
+            --header-bg: #1e1b4b;
+            --header-text: #e0e7ff;
+        }
+
+        /* Tema AMOLED */
+        [data-theme="amoled"] {
+            --bg-body: #000000;
+            --text-main: #ffffff;
+            --panel-bg: #121212;
+            --panel-border-lt: #2c2c2c;
+            --panel-border-rb: #000000;
+            --button-bg: #1e1e1e;
+            --button-border-lt: #333333;
+            --button-border-rb: #000000;
+            --inset-bg: #000000;
+            --header-bg: #222222;
+            --header-text: #ffffff;
+        }
+
+        * { box-sizing: border-box; font-family: "Tahoma", "Segoe UI", sans-serif; font-size: 11px; }
+        body { background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 6px; user-select: none; }
+        
+        /* LAYOUTS */
+        .app-window { display: grid; grid-template-columns: 320px 1fr; gap: 8px; margin: 0 auto; transition: max-width 0.2s ease; }
+        
+        .layout-normal { max-width: 1250px; }
+        .layout-extended { max-width: 100%; }
+
+        @media (max-width: 850px) {
+            .app-window { grid-template-columns: 1fr; }
+        }
+
+        .panel { background: var(--panel-bg); border: 2px solid; border-color: var(--panel-border-lt) var(--panel-border-rb) var(--panel-border-rb) var(--panel-border-lt); padding: 6px; }
+        .inset { border: 2px solid; border-color: var(--panel-border-rb) var(--panel-border-lt) var(--panel-border-lt) var(--panel-border-rb); background: var(--inset-bg); color: var(--text-main); }
+        
+        .controls-panel { display: flex; flex-direction: column; gap: 8px; }
+        .button-group { display: flex; gap: 4px; flex-wrap: wrap; }
+        button {
+            background: var(--button-bg); color: var(--text-main); border: 2px solid; 
+            border-color: var(--button-border-lt) var(--button-border-rb) var(--button-border-rb) var(--button-border-lt);
+            padding: 3px 8px; cursor: pointer; font-weight: bold; min-width: 50px; text-align: center;
+        }
+        button:active { border-color: var(--button-border-rb) var(--button-border-lt) var(--button-border-lt) var(--button-border-rb); padding: 4px 7px 2px 9px; }
+        
+        select, input[type="text"] { background: var(--inset-bg); color: var(--text-main); border: 1px solid var(--panel-border-rb); padding: 1px 3px; }
+        
+        .palette-preview { display: grid; gap: 1px; padding: 2px; background: #808080; min-height: 24px; }
+        .swatch { aspect-ratio: 1; border: 1px solid #000; cursor: pointer; position: relative; }
+        .swatch.selected { outline: 2px solid #ff0000; z-index: 2; }
+        
+        .sms-master-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 1px; padding: 2px; background: #000; margin-top: 5px; }
+        .master-swatch { aspect-ratio: 1; cursor: pointer; border: 1px solid #404040; }
+        .master-swatch:hover { outline: 1px solid #fff; z-index: 1; }
+
+        .custom-color-controls { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+        .color-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+        .color-row input[type="text"] { width: 70px; font-family: monospace; }
+        .color-row input[type="color"] { border: none; width: 26px; height: 22px; cursor: pointer; padding: 0; background: none; }
+
+        .viewer-panel { display: flex; flex-direction: column; height: 620px; }
+        .viewer-header { 
+            display: flex; justify-content: space-between; padding: 4px 8px; 
+            background: var(--header-bg); color: var(--header-text); font-weight: bold; font-family: monospace;
+        }
+        .viewer-options { display: flex; gap: 8px; padding: 4px; background: var(--panel-bg); align-items: center; flex-wrap: wrap; }
+        
+        .scroll-grid-container {
+            flex: 1; overflow-y: auto; background: #000; padding: 4px; position: relative;
+        }
+        .virtual-spacer { width: 100%; position: relative; }
+        .virtual-content { position: absolute; top: 0; left: 0; right: 0; display: flex; flex-direction: column; gap: 1px; align-items: flex-start; }
+
+        .rom-row { display: flex; gap: 1px; background: #000; box-sizing: border-box; }
+        .rom-swatch { 
+            aspect-ratio: 1; position: relative; cursor: pointer; 
+            border: 1px solid transparent; box-sizing: border-box; flex-shrink: 0;
+        }
+        .rom-swatch:hover { outline: 1px solid #ffffff; z-index: 2; }
+        
+        .size-small .rom-swatch { width: 14px; height: 14px; }
+        .size-medium .rom-swatch { width: 20px; height: 20px; }
+        .size-large .rom-swatch { width: 28px; height: 28px; }
+
+        .rom-swatch.active-swatch { outline: 2px solid #ff0000; z-index: 3; }
+
+        .rom-swatch.hidden-invalid {
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .invalid-pattern {
+            background: repeating-linear-gradient(
+                0deg,
+                #222222 0px,
+                #666666 2px,
+                #aaaaaa 4px,
+                #666666 6px,
+                #222222 8px
+            ) !important;
+        }
+
+        .rom-swatch.is-invalid::after {
+            content: "×"; color: #ff0000; font-size: 12px; font-weight: bold;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            pointer-events: none; text-shadow: 0px 0px 2px #000;
+        }
+
+        .asm-output { margin-top: 8px; height: 70px; width: 100%; resize: none; font-family: monospace; font-size: 11px; }
+        
+        .offset-input-container { display: flex; align-items: center; gap: 4px; }
+        .offset-input-container input { width: 65px; font-family: monospace; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+<div id="appWindow" class="app-window layout-normal">
+    <!-- LADO ESQUERDO -->
+    <div class="controls-panel">
+        <div class="panel">
+            <div class="button-group">
+                <button onclick="document.getElementById('fileInput').click()">Carregar ROM</button>
+                <input type="file" id="fileInput" accept=".sms,.bin" style="display:none">
+                <button onclick="saveROM()">Salvar</button>
+                <button onclick="saveROMAs()">Salvar como...</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <strong>Paleta Selecionada:</strong>
+            <div id="palettePreview" class="palette-preview inset" style="margin-top: 4px;"></div>
+            <div id="selectedColorDetail" style="margin-top: 4px; font-family: monospace; font-weight: bold;">
+                Slot: #0 | R:0 G:0 B:0 | Byte: $00
+            </div>
+        </div>
+
+        <div class="panel">
+            <strong>Editor de Cor Personalizada:</strong>
+            <div class="custom-color-controls">
+                <div class="color-row">
+                    <label>Color Picker / HEX:</label>
+                    <input type="color" id="customColorPicker" oninput="onCustomPickerChange(this.value)">
+                    <input type="text" id="customHexInput" class="inset" maxlength="7" value="#000000" onchange="onCustomHexChange(this.value)">
+                </div>
+                <div class="color-row">
+                    <span>SMS Byte (BBGGRR):</span>
+                    <strong id="customByteConverted" style="font-family: monospace;">$00</strong>
+                    <button onclick="applyCustomColor()">Aplicar Cor</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <strong>Paleta Completa do SMS (64 Cores VDP):</strong>
+            <div id="masterGrid" class="sms-master-grid inset"></div>
+            <div id="colorInfo" style="margin-top:4px; font-family: monospace;">Hover: R:0 G:0 B:0 | Byte: $00</div>
+        </div>
+
+        <div class="panel">
+            <strong>Controles de Edição & Rolagem:</strong>
+            <div class="button-group" style="margin-top: 4px;">
+                <button onclick="rotatePalette(-1)">Rolar &#8592;</button>
+                <button onclick="rotatePalette(1)">Rolar &#8594;</button>
+                <button onclick="reversePalette()">Inverter</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LADO DIREITO -->
+    <div class="panel viewer-panel">
+        <div class="viewer-header">
+            <span id="topLeftInfo">Top Left: $0000</span>
+            <span id="underMouseInfo">Under Mouse: ----</span>
+        </div>
+        <div class="viewer-options">
+            <div class="offset-input-container">
+                <label for="gotoOffsetInput">Offset:</label>
+                <input type="text" id="gotoOffsetInput" placeholder="HEX/DEC" onkeydown="if(event.key==='Enter') jumpToOffset()">
+                <button onclick="jumpToOffset()">Ir</button>
+            </div>
+
+            <label><input type="checkbox" id="chkShowInvalid" checked onchange="renderVirtualGrid()"> Mostrar Inválidas</label>
+            <label><input type="checkbox" id="chkLittleEndian" onchange="renderVirtualGrid(); updateCurrentPalettePreview();"> Little Endian</label>
+            
+            <div>
+                <label for="colorCountSelect">Cores/Linha: </label>
+                <select id="colorCountSelect" onchange="changeColorCount(this.value)">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="4">4</option>
+                    <option value="16" selected>16</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="paletteRowsSelect">Linhas da Paleta: </label>
+                <select id="paletteRowsSelect" onchange="changePaletteRows(this.value)">
+                    <option value="1" selected>1 Linha</option>
+                    <option value="2">2 Linhas</option>
+                    <option value="4">4 Linhas</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="layoutSelect">Layout: </label>
+                <select id="layoutSelect" onchange="changeLayout(this.value)">
+                    <option value="normal" selected>Normal</option>
+                    <option value="extended">Estendido</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="themeSelect">Tema: </label>
+                <select id="themeSelect" onchange="changeTheme(this.value)">
+                    <option value="default" selected>Padrão</option>
+                    <option value="win95">Windows 95</option>
+                    <option value="dark">Escuro</option>
+                    <option value="midnight">Meia Noite</option>
+                    <option value="amoled">AMOLED</option>
+                </select>
+            </div>
+
+            <div style="margin-left: auto;">
+                <label for="squareSizeSelect">Tamanho: </label>
+                <select id="squareSizeSelect" onchange="changeSquareSize(this.value)">
+                    <option value="small">Pequeno (14px)</option>
+                    <option value="medium" selected>Médio (20px)</option>
+                    <option value="large">Grande (28px)</option>
+                </select>
+            </div>
+        </div>
+        
+        <div id="scrollContainer" class="scroll-grid-container inset size-medium" onscroll="onVirtualScroll()">
+            <div id="virtualSpacer" class="virtual-spacer">
+                <div id="virtualContent" class="virtual-content"></div>
+            </div>
+        </div>
+
+        <textarea id="asmOutput" class="asm-output inset" readonly placeholder="Carregue uma ROM para ver a saída em código assembly (.db $XX)..."></textarea>
+    </div>
+</div>
+
+<script>
+    const SMS_SCALE = [0, 85, 170, 255];
+    const SQUARE_SIZES = { small: 15, medium: 21, large: 29 };
+    let currentSizeKey = 'medium';
+    
+    let romData = null;
+    let currentFileName = "edited_rom.sms";
+    let baseOffset = 0;
+    let activeSlotIndex = 0;
+    let pendingCustomByte = 0;
+    let colorsPerRow = 16;
+    let paletteRows = 1;
+
+    const COLOR_CACHE = new Array(256);
+    for (let b = 0; b < 256; b++) {
+        const r = (b & 0x03);
+        const g = (b >> 2) & 0x03;
+        const bCol = (b >> 4) & 0x03;
+        const isInvalid = b > 0x3F;
+        const hex = `#${SMS_SCALE[r].toString(16).padStart(2,'0')}${SMS_SCALE[g].toString(16).padStart(2,'0')}${SMS_SCALE[bCol].toString(16).padStart(2,'0')}`;
+        COLOR_CACHE[b] = { hex, r: SMS_SCALE[r], g: SMS_SCALE[g], b: SMS_SCALE[bCol], isInvalid, byte: b };
+    }
+
+    function changeTheme(themeName) {
+        if (themeName === 'default') {
+            document.documentElement.removeAttribute('data-theme');
+        } else {
+            document.documentElement.setAttribute('data-theme', themeName);
+        }
+    }
+
+    function changeLayout(mode) {
+        const appWin = document.getElementById('appWindow');
+        if (mode === 'extended') {
+            appWin.className = 'app-window layout-extended';
+        } else {
+            appWin.className = 'app-window layout-normal';
+        }
+        if (romData) renderVirtualGrid();
+    }
+
+    function decodeSMSByte(rawByte) {
+        let byte = rawByte;
+        if (document.getElementById('chkLittleEndian')?.checked) {
+            byte = ((rawByte & 0x0F) << 4) | ((rawByte & 0xF0) >> 4);
+        }
+        return COLOR_CACHE[byte & 0xFF] || COLOR_CACHE[0];
+    }
+
+    function rgbToSMSByte(r, g, b) {
+        const rVal = Math.min(3, Math.round(r / 85));
+        const gVal = Math.min(3, Math.round(g / 85));
+        const bVal = Math.min(3, Math.round(b / 85));
+        return rVal | (gVal << 2) | (bVal << 4);
+    }
+
+    function hexToRgb(hex) {
+        hex = hex.replace(/^#/, '');
+        if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+        const num = parseInt(hex, 16);
+        return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+    }
+
+    function updateCustomControlsFromByte(byte) {
+        const color = decodeSMSByte(byte);
+        pendingCustomByte = byte & 0x3F;
+        document.getElementById('customColorPicker').value = color.hex;
+        document.getElementById('customHexInput').value = color.hex.toUpperCase();
+        document.getElementById('customByteConverted').innerText = `$${pendingCustomByte.toString(16).toUpperCase().padStart(2, '0')}`;
+    }
+
+    function onCustomPickerChange(hex) {
+        document.getElementById('customHexInput').value = hex.toUpperCase();
+        const rgb = hexToRgb(hex);
+        pendingCustomByte = rgbToSMSByte(rgb.r, rgb.g, rgb.b);
+        document.getElementById('customByteConverted').innerText = `$${pendingCustomByte.toString(16).toUpperCase().padStart(2, '0')}`;
+    }
+
+    function onCustomHexChange(hex) {
+        if (!/^#[0-9A-F]{6}$/i.test(hex)) {
+            if (/^[0-9A-F]{6}$/i.test(hex)) hex = '#' + hex;
+            else return;
+        }
+        document.getElementById('customColorPicker').value = hex;
+        const rgb = hexToRgb(hex);
+        pendingCustomByte = rgbToSMSByte(rgb.r, rgb.g, rgb.b);
+        document.getElementById('customByteConverted').innerText = `$${pendingCustomByte.toString(16).toUpperCase().padStart(2, '0')}`;
+    }
+
+    function applyCustomColor() {
+        if (!romData) return;
+        romData[baseOffset + activeSlotIndex] = pendingCustomByte;
+        updateCurrentPalettePreview();
+        renderVirtualGrid();
+        generateASMOutput();
+    }
+
+    function initMasterGrid() {
+        const grid = document.getElementById('masterGrid');
+        grid.innerHTML = '';
+        for (let b = 0; b < 64; b++) {
+            const color = COLOR_CACHE[b];
+            const swatch = document.createElement('div');
+            swatch.className = 'master-swatch';
+            swatch.style.backgroundColor = color.hex;
+            swatch.title = `SMS Code: $${b.toString(16).toUpperCase().padStart(2,'0')}`;
+            
+            swatch.onclick = () => {
+                if (romData) {
+                    romData[baseOffset + activeSlotIndex] = b;
+                    updateCurrentPalettePreview();
+                    renderVirtualGrid();
+                    generateASMOutput();
+                }
+            };
+            swatch.onmouseover = () => {
+                document.getElementById('colorInfo').innerText = `Hover: R:${color.r} G:${color.g} B:${color.b} | Byte: $${b.toString(16).toUpperCase().padStart(2,'0')}`;
+            };
+            grid.appendChild(swatch);
+        }
+    }
+
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        currentFileName = file.name || "edited_rom.sms";
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            romData = new Uint8Array(evt.target.result);
+            baseOffset = 0;
+            activeSlotIndex = 0;
+            document.getElementById('scrollContainer').scrollTop = 0;
+            realignGridToOffset(0);
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    function jumpToOffset() {
+        if (!romData) return;
+        const inputVal = document.getElementById('gotoOffsetInput').value.trim();
+        if (!inputVal) return;
+
+        let targetOffset = 0;
+        if (inputVal.startsWith('$')) {
+            targetOffset = parseInt(inputVal.slice(1), 16);
+        } else if (inputVal.toLowerCase().startsWith('0x')) {
+            targetOffset = parseInt(inputVal, 16);
+        } else if (/^[0-9a-fA-F]+$/.test(inputVal)) {
+            targetOffset = parseInt(inputVal, 16);
+        } else {
+            targetOffset = parseInt(inputVal, 10);
+        }
+
+        if (isNaN(targetOffset)) return;
+
+        targetOffset = Math.max(0, Math.min(romData.length - 1, targetOffset));
+
+        const rowHeight = SQUARE_SIZES[currentSizeKey];
+        const targetRow = Math.floor(targetOffset / colorsPerRow);
+        const container = document.getElementById('scrollContainer');
+        
+        container.scrollTop = targetRow * rowHeight;
+        realignGridToOffset(targetOffset);
+    }
+
+    function changeColorCount(val) {
+        colorsPerRow = parseInt(val, 10);
+        const totalSlots = colorsPerRow * paletteRows;
+        if (activeSlotIndex >= totalSlots) activeSlotIndex = 0;
+        updateSpacerHeight();
+        updateCurrentPalettePreview();
+        renderVirtualGrid();
+        generateASMOutput();
+    }
+
+    function changePaletteRows(val) {
+        paletteRows = parseInt(val, 10);
+        const totalSlots = colorsPerRow * paletteRows;
+        if (activeSlotIndex >= totalSlots) activeSlotIndex = 0;
+        updateCurrentPalettePreview();
+        generateASMOutput();
+    }
+
+    function changeSquareSize(sizeKey) {
+        currentSizeKey = sizeKey;
+        const container = document.getElementById('scrollContainer');
+        container.className = `scroll-grid-container inset size-${sizeKey}`;
+        updateSpacerHeight();
+        renderVirtualGrid();
+    }
+
+    function updateSpacerHeight() {
+        if (!romData) return;
+        const totalRows = Math.ceil(romData.length / colorsPerRow);
+        const rowHeight = SQUARE_SIZES[currentSizeKey];
+        document.getElementById('virtualSpacer').style.height = `${totalRows * rowHeight}px`;
+    }
+
+    function onVirtualScroll() {
+        requestAnimationFrame(renderVirtualGrid);
+    }
+
+    function renderVirtualGrid() {
+        if (!romData) return;
+
+        updateSpacerHeight();
+        const container = document.getElementById('scrollContainer');
+        const content = document.getElementById('virtualContent');
+        const rowHeight = SQUARE_SIZES[currentSizeKey];
+        const showInvalid = document.getElementById('chkShowInvalid').checked;
+        
+        const scrollTop = container.scrollTop;
+        const viewportHeight = container.clientHeight;
+
+        const totalRows = Math.ceil(romData.length / colorsPerRow);
+        const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - 2);
+        const endIndex = Math.min(totalRows, Math.ceil((scrollTop + viewportHeight) / rowHeight) + 2);
+
+        content.style.transform = `translateY(${startIndex * rowHeight}px)`;
+        content.innerHTML = '';
+
+        for (let i = startIndex; i < endIndex; i++) {
+            const rowOffset = i * colorsPerRow;
+            const row = document.createElement('div');
+            row.className = 'rom-row';
+
+            for (let j = 0; j < colorsPerRow; j++) {
+                const absoluteIdx = rowOffset + j;
+                if (absoluteIdx >= romData.length) break;
+
+                const rawByte = romData[absoluteIdx];
+                const colorData = decodeSMSByte(rawByte);
+
+                const swatch = document.createElement('div');
+                const isSelected = (absoluteIdx === baseOffset);
+                const isInvalidByte = rawByte > 0x3F;
+                
+                let classes = 'rom-swatch';
+                if (isSelected) classes += ' active-swatch';
+                
+                if (isInvalidByte) {
+                    if (showInvalid) {
+                        classes += ' is-invalid invalid-pattern';
+                    } else {
+                        classes += ' hidden-invalid';
+                    }
+                } else {
+                    swatch.style.backgroundColor = colorData.hex;
+                }
+
+                swatch.className = classes;
+                
+                swatch.onmouseover = () => {
+                    document.getElementById('underMouseInfo').innerText = `Under Mouse: $${absoluteIdx.toString(16).toUpperCase().padStart(4, '0')}`;
+                };
+                swatch.onmouseleave = () => {
+                    document.getElementById('underMouseInfo').innerText = `Under Mouse: ----`;
+                };
+
+                swatch.onclick = (e) => {
+                    e.stopPropagation();
+                    realignGridToOffset(absoluteIdx);
+                };
+
+                row.appendChild(swatch);
+            }
+
+            content.appendChild(row);
+        }
+    }
+
+    function realignGridToOffset(clickedByteOffset) {
+        baseOffset = clickedByteOffset;
+        activeSlotIndex = 0;
+        
+        document.getElementById('topLeftInfo').innerText = `Top Left: $${baseOffset.toString(16).toUpperCase().padStart(4, '0')}`;
+
+        updateCurrentPalettePreview();
+        renderVirtualGrid();
+        generateASMOutput();
+    }
+
+    function updateCurrentPalettePreview() {
+        const preview = document.getElementById('palettePreview');
+        preview.style.gridTemplateColumns = `repeat(${colorsPerRow}, 1fr)`;
+        preview.innerHTML = '';
+        if (!romData) return;
+
+        const totalSlots = colorsPerRow * paletteRows;
+
+        for (let i = 0; i < totalSlots; i++) {
+            const currentIdx = baseOffset + i;
+            if (currentIdx >= romData.length) break;
+
+            const rawByte = romData[currentIdx];
+            const colorData = decodeSMSByte(rawByte);
+
+            const swatch = document.createElement('div');
+            const isInvalidByte = rawByte > 0x3F;
+            
+            let classes = 'swatch' + (i === activeSlotIndex ? ' selected' : '');
+            if (isInvalidByte) {
+                classes += ' invalid-pattern';
+            } else {
+                swatch.style.backgroundColor = colorData.hex;
+            }
+            
+            swatch.className = classes;
+            swatch.onclick = () => {
+                activeSlotIndex = i;
+                updateCurrentPalettePreview();
+            };
+
+            preview.appendChild(swatch);
+        }
+
+        const activeByte = romData[baseOffset + activeSlotIndex] || 0;
+        const activeColor = decodeSMSByte(activeByte);
+        document.getElementById('selectedColorDetail').innerText = 
+            `Slot: #${activeSlotIndex} | R:${activeColor.r} G:${activeColor.g} B:${activeColor.b} | Byte: $${activeByte.toString(16).toUpperCase().padStart(2, '0')}`;
+
+        updateCustomControlsFromByte(activeByte);
+    }
+
+    function rotatePalette(direction) {
+        if (!romData) return;
+        const totalSlots = colorsPerRow * paletteRows;
+        const maxLen = Math.min(totalSlots, romData.length - baseOffset);
+        const slice = Array.from(romData.slice(baseOffset, baseOffset + maxLen));
+        
+        if (direction === -1) {
+            const first = slice.shift();
+            slice.push(first);
+        } else if (direction === 1) {
+            const last = slice.pop();
+            slice.unshift(last);
+        }
+
+        for (let i = 0; i < maxLen; i++) {
+            romData[baseOffset + i] = slice[i];
+        }
+
+        updateCurrentPalettePreview();
+        renderVirtualGrid();
+        generateASMOutput();
+    }
+
+    function reversePalette() {
+        if (!romData) return;
+        const totalSlots = colorsPerRow * paletteRows;
+        const maxLen = Math.min(totalSlots, romData.length - baseOffset);
+        const currentSlice = romData.slice(baseOffset, baseOffset + maxLen);
+        for (let i = 0; i < maxLen; i++) {
+            romData[baseOffset + i] = currentSlice[maxLen - 1 - i];
+        }
+        updateCurrentPalettePreview();
+        renderVirtualGrid();
+        generateASMOutput();
+    }
+
+    function generateASMOutput() {
+        if (!romData) return;
+        const totalSlots = colorsPerRow * paletteRows;
+        const maxLen = Math.min(totalSlots, romData.length - baseOffset);
+        let asm = `; Paleta (${maxLen} Cores - ${paletteRows} Linha(s)) no Offset $${baseOffset.toString(16).toUpperCase()}\n.db `;
+        const bytes = [];
+        for (let i = 0; i < maxLen; i++) {
+            const b = romData[baseOffset + i];
+            bytes.push(`$${b.toString(16).toUpperCase().padStart(2, '0')}`);
+        }
+        asm += bytes.join(', ');
+        document.getElementById('asmOutput').value = asm;
+    }
+
+    function triggerDownload(filename) {
+        if (!romData) return;
+        const blob = new Blob([romData], { type: 'application/octet-stream' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+    }
+
+    function saveROM() {
+        if (!romData) return;
+        triggerDownload(currentFileName);
+    }
+
+    function saveROMAs() {
+        if (!romData) return;
+        const newName = prompt("Salvar como...", currentFileName);
+        if (newName && newName.trim() !== "") {
+            currentFileName = newName.trim();
+            triggerDownload(currentFileName);
+        }
+    }
+
+    window.addEventListener('resize', () => {
+        if (romData) renderVirtualGrid();
+    });
+
+    initMasterGrid();
+</script>
+
+</body>
+</html>
