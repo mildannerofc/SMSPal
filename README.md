@@ -1,4 +1,6 @@
-# SMSPal
+<img width="338" height="177" alt="image" src="https://github.com/user-attachments/assets/40177ed2-c4c8-4d20-b353-f021255c6476" />
+
+# SMSPal - A Master System palette viewer and editor
 
 SMSPal is a browser-based viewer and editor for palettes stored in Sega Master System ROM files. Inspired by HivePal, it helps you inspect SMS VDP colors, locate palette data, edit individual color entries, and export modified ROM data directly from your browser.
 
