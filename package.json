@@ -1,7 +1,7 @@
 {
   "name": "sms-pal",
   "version": "1.0.0",
-  "private": true,
+  "private": false,
   "description": "SMSPal - A Master System palette viewer and editor",
   "homepage": "https://mildannerofc.github.io/SMSPal/",
   "scripts": {
