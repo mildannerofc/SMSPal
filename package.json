@@ -1,0 +1,14 @@
+{
+  "name": "sms-pal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SMSPal - A Master System palette viewer and editor",
+  "homepage": "https://mildannerofc.github.io/SMSPal/",
+  "scripts": {
+    "start": "npx http-server . -p 8000",
+    "dev": "npx http-server . -p 8000"
+  },
+  "devDependencies": {
+    "http-server": "^14.2.1"
+  }
+}
